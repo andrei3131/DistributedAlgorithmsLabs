@@ -7,7 +7,7 @@ defmodule Server do
 def start do
   IO.puts ["      Server at ", DNS.my_ip_addr()]
   receive do
-  { :bind, client } -> next()
+  { :bind, _ } -> next()
   end
 end # start
 
