@@ -12,14 +12,22 @@ def start do
 end
 
 defp next(server) do
-  if :rand.uniform() < 0.5 do
-     send server, { :circle, 1.0, :pid, self()}
-  else
-     send server, { :square, 5.0, :pid, self()}
+  rand = :rand.uniform()
+  cond do
+     rand < 1/3 ->
+        send server, { :circle, 1.0, :pid, self()}
+     rand < 2/3 ->
+        send server, { :square, 5.0, :pid, self()}
+     rand <= 1  ->
+        send server, { :a, 3.0, :b, 4.0, :c, 5.0, :pid, self()}
   end
+
+
   receive do
   { :result, area } ->
     IO.puts "Area is #{area}"
+  { :triangleArea, triangleArea } ->
+    IO.puts "Area of the triangle is #{triangleArea}"
   end
   Process.sleep(DAC.random(3) * 1000)
   next(server)

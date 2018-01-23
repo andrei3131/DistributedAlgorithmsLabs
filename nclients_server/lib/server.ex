@@ -22,6 +22,9 @@ def next() do
   { :square, side, :pid, client_id } ->
     send client_id, { :result, side * side }
     IO.puts ["Received message from ", inspect(client_id)]
+  { :a, a, :b, b, :c, c, :pid, client_id} ->
+      semi = (a + b + c) / 2
+      send client_id, { :triangleArea, DAC.sqrt(semi * (semi - a) * (semi - b) * (semi - c))}
   end
   next()
 end # next
