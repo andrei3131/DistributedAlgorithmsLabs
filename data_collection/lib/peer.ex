@@ -3,27 +3,38 @@ defmodule Peer do
 def start() do
     IO.puts ["        Peer at ", DNS.my_ip_addr()]
     receive do
-    { :hello, neighbours} ->
-      IO.puts ["Peer ", inspect(self()), " forwards first :hello to neighbours ", inspect(neighbours)]
-      Enum.map(neighbours, fn(n) ->
-               send n, {:hello, neighbours, :parent, self()} end)
-      receiveMembership(neighbours, 1, 0)
+         {:neighbours, neighbour_ids} ->
+            IO.puts ["Registering neighbours for node ", inspect(self()), ": ", inspect(neighbour_ids)]
+            registerNeighbours(neighbour_ids, MapSet.new())
     end
 end
 
-defp receiveMembership(neighbours, countHello, countChildMsgs) do
+defp registerNeighbours(neighbours, children) do
+    receive do
+        {:iamyourchild, _} ->
+            # Do nothing
+            registerNeighbours(neighbours, children)
+        {:hello, parent} ->
+            IO.puts ["Node ", inspect(self()), " has parent = ", inspect(parent)]
+            send parent, {:iamyourchild, self()}
+            Enum.map(neighbours, fn(n) ->
+                                 send n, {:hello, self()} end)
+            receiveMembership(parent, neighbours, children, 1)
+    end
+end
+
+defp receiveMembership(parent, neighbours, children, countHello) do
   receive do
-      {:hello, _, :parent, parent_id} ->
-          Process.sleep(DAC.random(3) * 1000)
-          IO.puts ["Peer ", inspect(self()), " Parent ", inspect(parent_id), " Messages seen = ", inspect(countHello)]
-      {:child, _} ->
-          IO.puts ["Peer ", inspect(self()), " has received ", inspect(countChildMsgs + 1), " child messages."]
-          receiveMembership(neighbours, countHello, countChildMsgs + 1)
+      {:iamyourchild, child} ->
+        receiveMembership(parent, neighbours, MapSet.put(children, child), countHello)
+      {:hello, _} ->
+         IO.puts ["Peer ", inspect(self()), " Parent ", inspect(parent), " Messages seen = ", inspect(countHello + 1)]
+         receiveMembership(parent, neighbours, children, countHello + 1)
   after
-      1000 -> IO.puts ["Peer ", inspect(self()), " Messages seen = ", inspect(countHello)]
+      1000 -> IO.puts ["Peer ", inspect(self()), " Children = ", inspect(children)]
   end
   Process.sleep(DAC.random(3) * 1000)
-  receiveMembership(neighbours, countHello + 1, countChildMsgs)
+  receiveMembership(parent, neighbours, children, countHello)
 end
 
 end  #module ------------
